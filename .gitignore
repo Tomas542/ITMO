@@ -2,3 +2,5 @@
 .pixi/*
 !.pixi/config.toml
 .env
+.venv
+*.tar.gz
