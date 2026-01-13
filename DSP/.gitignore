@@ -1,0 +1,7 @@
+*.npz
+*.json
+*.py
+
+waves_yesno/
+resources/
+data/
