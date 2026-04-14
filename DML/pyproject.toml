@@ -3,15 +3,17 @@ name = "gmo"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.12, <3.13"
+requires-python = ">=3.10, <3.11"
 dependencies = [
-    "ipykernel>=7.2.0, <7.3",
+    "ipykernel>=7.2.0, <8",
     "seaborn>=0.13.2, <0.14",
     "torch>=2.6.0, <2.7",
     "torchvision>=0.21.0, <0.22",
     "torchaudio>=2.6.0, <2.7",
     "sentence-transformers>=5.0, <5.4",
-    "transformers>5.0, <5.4", "pytorch-lightning>=2.6.1,<3", "gensim>=4.4.0,<5",
+    "transformers>5.0, <5.4",
+    "pytorch-lightning==2.6.0,<3",
+    "gensim>=4.4.0,<5",
 ]
 
 [tool.ruff]
