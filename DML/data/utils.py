@@ -1,11 +1,15 @@
 from enum import StrEnum
 
+import numpy as np
+import pandas as pd
+import torch
+from scipy import load_npz
 from torch.utils.data import DataLoader, Dataset
 
 
 class FeatureType(StrEnum):
     TFIDF = "tf_df"
-    SENT = "sent"
+    W2V = "w2v"
     MEL = "mel"
     MFCC = "mfcc"
 
@@ -17,17 +21,27 @@ class SplitType(StrEnum):
 
 
 class SentimentDataset(Dataset):
-    def __init__(self, feature_type: FeatureType, split: SplitType) -> None:
+    def __init__(
+        self,
+        feature_type: FeatureType,
+        split: SplitType,
+        mosei_path: str = "/home/ext-yudin-a@ad.speechpro.com/dml/datasets/CMU-MOSEI/",
+    ) -> None:
         match feature_type:
             case FeatureType.TFIDF:
-                pass
-            case FeatureType.SENT:
-                pass
+                data = load_npz(f"features/{split}_tfidf.npz")
+            case FeatureType.W2V:
+                data = np.load(f"features/{split}_w2v.npy")
             case FeatureType.MEL:
-                pass
+                data = np.load(f"features/{split}_mel.npy")
             case FeatureType.MFCC:
-                pass
-        self.data = ...
+                data = np.load(f"features/{split}_mfcc.npy")
+        data = torch.from_numpy(data)
+        suffix = "original" if split == "test" else "modified"
+        split_name = split[0].upper() + split[1:]
+        df = pd.read_csv(mosei_path + f"/Data_{split_name}_{suffix}.csv")
+        sentiment = df["sentiment"].to_list()
+        self.data = list(zip(data, sentiment))
         self.sent_cls = {"negative": 0, "neutral": 1, "positive": 2}
 
     def __len__(self) -> int:
