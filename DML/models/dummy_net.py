@@ -6,9 +6,9 @@ class DummyNet(nn.Module):
         super().__init__()
         self.fc1 = nn.Linear(input_dim, 256)
         self.ln1 = nn.LayerNorm(256)
-        self.fc2 - nn.Linear(256, 128)
+        self.fc2 = nn.Linear(256, 128)
         self.ln2 = nn.LayerNorm(128)
-        self.fc3 - nn.Linear(128, num_classes, bias=False)
+        self.fc3 = nn.Linear(128, num_classes, bias=False)
 
         self.act = nn.SiLU()
 

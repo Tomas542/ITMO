@@ -10,13 +10,13 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--train", type=bool, default=False)
     parser.add_argument("--test", type=bool, default=False)
-    parser.add_argument("--faeture_type", type=str, choices=["tf_df", "w2v", "mel", "mfcc"], required=True)
+    parser.add_argument("--feature_type", type=str, choices=["tf_idf", "w2v", "mel", "mfcc"], required=True)
     return parser.parse_args()
 
 
 def main(args) -> None:
     pl.seed_everything(42)
-    lm = EmoClassifier(args.faeture_type)
+    lm = EmoClassifier(args.feature_type, num_classes=3)
     metric = "val_f1"
     mode = "max"
     callbacks = [
@@ -31,13 +31,13 @@ def main(args) -> None:
             monitor=metric,
             mode=mode,
             dirpath="checkpoints",
-            filename=f"ckpt_{args.faeture_type}",
+            filename=f"ckpt_{args.feature_type}",
             auto_insert_metric_name=False,
             save_top_k=1,
         ),
     ]
     trainer = pl.Trainer(
-        max_epochs=10,
+        max_epochs=15,
         num_sanity_val_steps=0,
         enable_model_summary=False,
         gradient_clip_val=1,
@@ -47,11 +47,11 @@ def main(args) -> None:
         logger=False,
     )
     if args.train:
-        train_loader = get_dataloader(args.faeture_type, "train")
-        val_loader = get_dataloader(args.faeture_type, "val")
+        train_loader = get_dataloader(args.feature_type, "train")
+        val_loader = get_dataloader(args.feature_type, "val")
         trainer.fit(lm, train_dataloaders=train_loader, val_dataloaders=val_loader)
     if args.test:
-        test_loader = get_dataloader(args.faeture_type, "test")
+        test_loader = get_dataloader(args.feature_type, "test")
         trainer.test(lm, dataloaders=test_loader, ckpt_path="best")
 
 

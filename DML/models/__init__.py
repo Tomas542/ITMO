@@ -1,3 +1,3 @@
-from lightning_module import EmoClassifier
+from .lightning_module import EmoClassifier
 
 __all__ = ["EmoClassifier"]

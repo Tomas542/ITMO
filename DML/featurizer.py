@@ -1,3 +1,5 @@
+import re
+
 import gensim
 import numpy as np
 import pandas as pd
@@ -7,13 +9,21 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from torch import Tensor
 from torchaudio import transforms as T
 
+with open("stopwords.txt") as file:
+    stop_words = set(file.read().splitlines())
+
 
 def clean_text(text: str) -> str:
     text = text.lower().strip()
-    # remove punctuation
-    # remove apostroph
-    # remove stopwords
-    return text
+    # Remove contractions and possessives
+    text = re.sub(r"(\w+)'(s|re|t|ll|ve|d|m)\b", r"\1", text, flags=re.IGNORECASE)
+    # Remove all punctuation
+    text = re.sub(r"[^\w\s]", "", text)
+    # Split into words, filter out stop words, and rejoin
+    words = text.split()
+    words = [word.lower() for word in words if word.lower() not in stop_words]
+    return " ".join(words)
+
 
 
 def tokenize(text: str) -> list[str]:
@@ -30,10 +40,12 @@ def get_sentence_mean_vec(w2v, text: list[str]) -> np.ndarray:
         vecs.append(vec)
     return np.mean(vecs, axis=0)
 
+mosei_path = "/home/ext-yudin-a@ad.speechpro.com/dml/datasets/CMU-MOSEI/"
+wav_dir = "/Audio/WAV_16000/"
 
-train_df = pd.read_csv("data/Data_Train_modified.csv")
-val_df = pd.read_csv("data/Data_Val_modified.csv")
-test_df = pd.read_csv("data/Data_Test_modified.csv")
+train_df = pd.read_csv(mosei_path+"/Data_Train_modified.csv")
+val_df = pd.read_csv(mosei_path+"/Data_Val_modified.csv")
+test_df = pd.read_csv(mosei_path+"/Data_Test_original.csv")
 
 # for text features
 train_text = train_df["text"].apply(clean_text).to_list()
@@ -41,12 +53,13 @@ val_text = val_df["text"].apply(clean_text).to_list()
 test_text = test_df["text"].apply(clean_text).to_list()
 
 # for audio features
-train_wavs = None
-val_wavs = None
-test_wavs = None
+# train_wavs = train_df["video"].apply(lambda x: mosei_path + wav_dir + x + ".wav").to_list()
+# val_wavs = val_df["video"].apply(lambda x: mosei_path + wav_dir + x + ".wav").to_list()
+# test_wavs = test_df["video"].apply(lambda x: mosei_path + wav_dir + x + ".wav").to_list()
 
+del train_df, val_df, test_df
 # TF-iDF
-tf_idf = TfidfVectorizer(min_df=0.005, max_df=0.995, max_features=450)
+tf_idf = TfidfVectorizer(min_df=0.001, max_df=0.999, max_features=300)
 train_tf_idf = tf_idf.fit_transform(train_text)
 val_tf_idf = tf_idf.transform(val_text)
 test_tf_idf = tf_idf.transform(test_text)
@@ -59,7 +72,6 @@ train_tokenized = [tokenize(text) for text in train_text]
 val_tokenized = [tokenize(text) for text in val_text]
 test_tokenized = [tokenize(text) for text in test_text]
 
-
 # Word2Vec
 w2v = gensim.models.Word2Vec(train_tokenized, vector_size=250, min_count=2, window=3)
 
@@ -71,7 +83,7 @@ np.save("features/train_w2v.npy", np.array(train_w2v))
 np.save("features/val_w2v.npy", np.array(val_w2v))
 np.save("features/test_w2v.npy", np.array(test_w2v))
 
-
+exit()
 # LogMel
 class LogMelSpectrogram(T.MelSpectrogram):
     def __init__(self, eps=1e-8, **kwargs) -> None:
@@ -100,6 +112,8 @@ train_mel = [mel(wav_path).numpy() for wav_path in train_wavs]
 val_mel = [mel(wav_path).numpy() for wav_path in val_wavs]
 test_mel = [mel(wav_path).numpy() for wav_path in test_wavs]
 
+print(train_mel[0].shape)
+
 np.save("features/train_mel.npy", np.array(train_mel))
 np.save("features/val_mel.npy", np.array(val_mel))
 np.save("features/test_mel.npy", np.array(test_mel))
@@ -127,6 +141,8 @@ mfcc = MFCC(
 train_mfcc = [mfcc(wav_path).numpy() for wav_path in train_wavs]
 val_mfcc = [mfcc(wav_path).numpy() for wav_path in val_wavs]
 test_mfcc = [mfcc(wav_path).numpy() for wav_path in test_wavs]
+
+print(train_mfcc[0].shape)
 
 np.save("features/train_mfcc.npy", np.array(train_mfcc))
 np.save("features/val_mfcc.npy", np.array(val_mfcc))
