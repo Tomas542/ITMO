@@ -10,6 +10,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--train", type=bool, default=False)
     parser.add_argument("--test", type=bool, default=False)
+    parser.add_argument("--ckpt_path", type=str | None, default=None)
     parser.add_argument("--feature_type", type=str, choices=["tf_idf", "w2v", "mel", "mfcc"], required=True)
     return parser.parse_args()
 
@@ -46,13 +47,17 @@ def main(args) -> None:
         callbacks=callbacks,
         logger=False,
     )
+    ckpt_path = args.ckpt_path
     if args.train:
         train_loader = get_dataloader(args.feature_type, "train")
         val_loader = get_dataloader(args.feature_type, "val")
         trainer.fit(lm, train_dataloaders=train_loader, val_dataloaders=val_loader)
+        ckpt_path = "best"
     if args.test:
+        if ckpt_path is None:
+            raise RuntimeError("No checkpoint path was passed")
         test_loader = get_dataloader(args.feature_type, "test")
-        trainer.test(lm, dataloaders=test_loader, ckpt_path="best")
+        trainer.test(lm, dataloaders=test_loader, ckpt_path=ckpt_path)
 
 
 if __name__ == "__main__":

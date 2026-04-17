@@ -1,11 +1,12 @@
 import pytorch_lightning as pl
 import torch
 import torchmetrics
-from .dummy_net import DummyNet
 from torch import nn, optim
 from torch.nn import functional as F
 
 from data import FeatureType
+
+from .dummy_net import DummyNet
 
 
 class EmoClassifier(pl.LightningModule):
@@ -28,13 +29,16 @@ class EmoClassifier(pl.LightningModule):
 
         self.metrics = nn.ModuleDict(
             {
-                "_" + split: torchmetrics.MetricCollection({
-                        "f1": torchmetrics.F1Score(task="multiclass", num_classes=num_classes),
-                        "acc": torchmetrics.Accuracy(task="multiclass", num_classes=num_classes),
-                        "precision": torchmetrics.Precision(task="multiclass", num_classes=num_classes),
-                        "recall": torchmetrics.Recall(task="multiclass", num_classes=num_classes),
-                        "roc-auc": torchmetrics.AUROC(task="multiclass", num_classes=num_classes),
-                }, prefix=split+"_")
+                "_" + split: torchmetrics.MetricCollection(
+                    {
+                        "f1": torchmetrics.F1Score(task="multiclass", num_classes=num_classes, average="macro"),
+                        "acc": torchmetrics.Accuracy(task="multiclass", num_classes=num_classes, average="macro"),
+                        "precision": torchmetrics.Precision(task="multiclass", num_classes=num_classes, average="macro"),
+                        "recall": torchmetrics.Recall(task="multiclass", num_classes=num_classes, average="macro"),
+                        "roc-auc": torchmetrics.AUROC(task="multiclass", num_classes=num_classes, average="macro"),
+                    },
+                    prefix=split + "_",
+                )
                 for split in ["train", "val", "test"]
             }
         )
