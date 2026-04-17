@@ -10,8 +10,9 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--train", type=bool, default=False)
     parser.add_argument("--test", type=bool, default=False)
-    parser.add_argument("--ckpt_path", type=str | None, default=None)
-    parser.add_argument("--feature_type", type=str, choices=["tf_idf", "w2v", "mel", "mfcc"], required=True)
+    parser.add_argument("--ckpt_path", type=str, default=None)
+    parser.add_argument("--feature_type", type=str, choices=["tf_idf", "w2v", "mel", "mfcc", "conformer"], required=True)
+    parser.add_argument("--transfer_learning", type=bool, default=True)
     return parser.parse_args()
 
 

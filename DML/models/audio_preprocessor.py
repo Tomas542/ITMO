@@ -215,7 +215,11 @@ class FilterbankFeatures(nn.Module):
 
         # disable autocast to get full range of stft values
         with torch.amp.autocast(x.device.type, enabled=False):
-            x = self.stft(x)
+            try:
+                x = self.stft(x)
+            except Exception as e:
+                print(f"{x.shape=}")
+                raise e
 
         # torch stft returns complex tensor (of shape [B,N,T]); so convert to magnitude
         # guard is needed for sqrt if grads are passed through

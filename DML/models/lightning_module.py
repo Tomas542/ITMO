@@ -6,6 +6,7 @@ from torch.nn import functional as F
 
 from data import FeatureType
 
+from .audio_encoder import ConformerAttentiveProbe
 from .dummy_net import DummyNet
 
 
@@ -26,6 +27,22 @@ class EmoClassifier(pl.LightningModule):
             case FeatureType.MFCC:
                 input_dim = 40
                 self.model = DummyNet(input_dim, num_classes)
+            case FeatureType.CONFORMER:
+                self.model = ConformerAttentiveProbe(num_classes)
+
+                # just a preprocessor
+                self.model.proc.eval()
+                for param in self.model.proc.parameters():
+                    param.requires_grad = False
+                if transfer_learning:
+                    self.model.enc.eval()
+                    for param in self.model.enc.parameters():
+                        param.requires_grad = False
+
+            case FeatureType.BERT:
+                raise NotImplementedError(f"No such faeture option {net_type}")
+            case _:
+                raise NotImplementedError(f"No such faeture option {net_type}")
 
         self.metrics = nn.ModuleDict(
             {
@@ -43,12 +60,19 @@ class EmoClassifier(pl.LightningModule):
             }
         )
 
-    def forward(self, features: torch.Tensor) -> torch.Tensor:
-        return self.model(features)
+    def forward(self, features: torch.Tensor, length: list[int] | None) -> torch.Tensor:
+        if length is None:
+            return self.model(features)
+
+        return self.model(features, length)
 
     def __shared_step(self, batch: tuple, step_type: str) -> tuple[torch.Tensor, torch.Tensor]:
-        features, labels = batch
-        logits = self(features)
+        length = None
+        if len(batch) == 3:
+            features, length, labels = batch
+        else:
+            features, labels = batch
+        logits = self(features, length)
         loss = F.cross_entropy(logits, labels)
         m_out = self.metrics["_" + step_type](logits, labels)
 
