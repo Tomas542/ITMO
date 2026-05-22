@@ -15,15 +15,11 @@ with open("stopwords.txt") as file:
 
 def clean_text(text: str) -> str:
     text = text.lower().strip()
-    # Remove contractions and possessives
     text = re.sub(r"(\w+)'(s|re|t|ll|ve|d|m)\b", r"\1", text, flags=re.IGNORECASE)
-    # Remove all punctuation
     text = re.sub(r"[^\w\s]", "", text)
-    # Split into words, filter out stop words, and rejoin
     words = text.split()
     words = [word.lower() for word in words if word.lower() not in stop_words]
     return " ".join(words)
-
 
 
 def tokenize(text: str) -> list[str]:
@@ -40,12 +36,13 @@ def get_sentence_mean_vec(w2v, text: list[str]) -> np.ndarray:
         vecs.append(vec)
     return np.mean(vecs, axis=0)
 
+
 mosei_path = "/home/ext-yudin-a@ad.speechpro.com/dml/datasets/CMU-MOSEI/"
 wav_dir = "/Audio/WAV_16000/"
 
-train_df = pd.read_csv(mosei_path+"/Data_Train_modified.csv")
-val_df = pd.read_csv(mosei_path+"/Data_Val_modified.csv")
-test_df = pd.read_csv(mosei_path+"/Data_Test_original.csv")
+train_df = pd.read_csv(mosei_path + "/Data_Train_modified.csv")
+val_df = pd.read_csv(mosei_path + "/Data_Val_modified.csv")
+test_df = pd.read_csv(mosei_path + "/Data_Test_original.csv")
 
 # for text features
 train_text = train_df["text"].apply(clean_text).to_list()
@@ -53,9 +50,9 @@ val_text = val_df["text"].apply(clean_text).to_list()
 test_text = test_df["text"].apply(clean_text).to_list()
 
 # for audio features
-# train_wavs = train_df["video"].apply(lambda x: mosei_path + wav_dir + x + ".wav").to_list()
-# val_wavs = val_df["video"].apply(lambda x: mosei_path + wav_dir + x + ".wav").to_list()
-# test_wavs = test_df["video"].apply(lambda x: mosei_path + wav_dir + x + ".wav").to_list()
+train_wavs = train_df["video"].apply(lambda x: mosei_path + wav_dir + x + ".wav").to_list()
+val_wavs = val_df["video"].apply(lambda x: mosei_path + wav_dir + x + ".wav").to_list()
+test_wavs = test_df["video"].apply(lambda x: mosei_path + wav_dir + x + ".wav").to_list()
 
 del train_df, val_df, test_df
 # TF-iDF
@@ -83,7 +80,7 @@ np.save("features/train_w2v.npy", np.array(train_w2v))
 np.save("features/val_w2v.npy", np.array(val_w2v))
 np.save("features/test_w2v.npy", np.array(test_w2v))
 
-exit()
+
 # LogMel
 class LogMelSpectrogram(T.MelSpectrogram):
     def __init__(self, eps=1e-8, **kwargs) -> None:

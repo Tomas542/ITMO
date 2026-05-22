@@ -11,14 +11,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--train", type=bool, default=False)
     parser.add_argument("--test", type=bool, default=False)
     parser.add_argument("--ckpt_path", type=str, default=None)
-    parser.add_argument("--feature_type", type=str, choices=["tf_idf", "w2v", "mel", "mfcc", "conformer"], required=True)
+    parser.add_argument("--feature_type", type=str, choices=["tf_idf", "w2v", "mel", "mfcc", "conformer", "bert", "early_fusion", "late_fusion", "cross-attn-fusion"], required=True)
+    parser.add_argument("--num_layers", type=int, default=4)
+    parser.add_argument("--num_heads", type=int, default=4)
     parser.add_argument("--transfer_learning", type=bool, default=True)
     return parser.parse_args()
 
 
 def main(args) -> None:
-    pl.seed_everything(42)
-    lm = EmoClassifier(args.feature_type, num_classes=3)
+    pl.seed_everything(42, verbose=False)
+    lm = EmoClassifier(args.feature_type, num_classes=3, transfer_learning=args.transfer_learning, num_layers=args.num_layers, num_heads=args.num_heads)
     metric = "val_f1"
     mode = "max"
     callbacks = [
@@ -38,6 +40,10 @@ def main(args) -> None:
             save_top_k=1,
         ),
     ]
+    logger = pl.loggers.CSVLogger(
+        "logs",
+        name=f"{args.feature_type}",
+    )
     trainer = pl.Trainer(
         max_epochs=15,
         num_sanity_val_steps=0,
@@ -46,7 +52,7 @@ def main(args) -> None:
         deterministic=True,
         benchmark=False,
         callbacks=callbacks,
-        logger=False,
+        logger=[logger],
     )
     ckpt_path = args.ckpt_path
     if args.train:

@@ -397,7 +397,7 @@ class AudioToMelSpectrogramPreprocessor(AudioPreprocessor):
     def __init__(
         self,
         sample_rate=16000,
-        window_size=0.02,
+        window_size=0.025,
         window_stride=0.01,
         n_window_size=None,
         n_window_stride=None,

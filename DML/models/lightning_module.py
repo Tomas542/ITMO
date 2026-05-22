@@ -8,10 +8,13 @@ from data import FeatureType
 
 from .audio_encoder import ConformerAttentiveProbe
 from .dummy_net import DummyNet
+from .early_mm import EalryClassifier
+from .late_mm import LateClassifier
+from .text_encoder import BertAttentiveProbe
 
 
 class EmoClassifier(pl.LightningModule):
-    def __init__(self, net_type: FeatureType, num_classes: int = 1, transfer_learning: bool = True) -> None:
+    def __init__(self, net_type: FeatureType, num_classes: int = 1, transfer_learning: bool = True, num_layers: int = 4, num_heads: int = 4) -> None:
         super().__init__()
         net_type = FeatureType(net_type)
         match net_type:
@@ -28,7 +31,7 @@ class EmoClassifier(pl.LightningModule):
                 input_dim = 40
                 self.model = DummyNet(input_dim, num_classes)
             case FeatureType.CONFORMER:
-                self.model = ConformerAttentiveProbe(num_classes)
+                self.model = ConformerAttentiveProbe(num_classes, num_layers=num_layers, num_heads=num_heads)
 
                 # just a preprocessor
                 self.model.proc.eval()
@@ -40,7 +43,36 @@ class EmoClassifier(pl.LightningModule):
                         param.requires_grad = False
 
             case FeatureType.BERT:
-                raise NotImplementedError(f"No such faeture option {net_type}")
+                self.model = BertAttentiveProbe(num_classes=num_classes, num_layers=num_layers, num_heads=num_heads)
+                if transfer_learning:
+                    self.model.enc.eval()
+                    for param in self.model.enc.parameters():
+                        param.requires_grad = False
+
+            case FeatureType.EARLY_FUSION:
+                self.model = EalryClassifier(num_classes=num_classes)
+                self.model.proc.eval()
+                if transfer_learning:
+                    self.model.text_enc.eval()
+                    for param in self.model.text_enc.parameters():
+                        param.requires_grad = False
+
+                    self.model.audio_enc.eval()
+                    for param in self.model.audio_enc.parameters():
+                        param.requires_grad = False
+
+            case FeatureType.LATE_FUSION:
+                self.model = LateClassifier(num_classes=num_classes)
+                self.model.proc.eval()
+                if transfer_learning:
+                    self.model.text_enc.eval()
+                    for param in self.model.text_enc.parameters():
+                        param.requires_grad = False
+
+                    self.model.audio_enc.eval()
+                    for param in self.model.audio_enc.parameters():
+                        param.requires_grad = False
+
             case _:
                 raise NotImplementedError(f"No such faeture option {net_type}")
 
@@ -60,24 +92,30 @@ class EmoClassifier(pl.LightningModule):
             }
         )
 
-    def forward(self, features: torch.Tensor, length: list[int] | None) -> torch.Tensor:
-        if length is None:
-            return self.model(features)
+    def forward(self, features: torch.Tensor, length: list[int] | None, texts: list[str] | None = None) -> torch.Tensor:
+        if texts is not None:
+            return self.model(features, length, texts)
+        if length is not None:
+            return self.model(features, length)
 
-        return self.model(features, length)
+        return self.model(features)
 
     def __shared_step(self, batch: tuple, step_type: str) -> tuple[torch.Tensor, torch.Tensor]:
         length = None
-        if len(batch) == 3:
+        texts = None
+
+        if len(batch) == 4:
+            texts, features, length, labels = batch
+        elif len(batch) == 3:
             features, length, labels = batch
         else:
             features, labels = batch
-        logits = self(features, length)
+        logits = self(features, length, texts)
         loss = F.cross_entropy(logits, labels)
         m_out = self.metrics["_" + step_type](logits, labels)
 
-        self.log(f"{step_type}_loss", loss)
-        self.log_dict(m_out, on_epoch=True)
+        self.log(f"{step_type}_loss", loss, prog_bar=True, on_step=step_type == "train")
+        self.log_dict(m_out, on_step=False, on_epoch=True)
         return loss
 
     def training_step(self, batch: tuple, batch_idx: int) -> torch.Tensor:
