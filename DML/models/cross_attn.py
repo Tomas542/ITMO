@@ -83,7 +83,7 @@ class CrossAttnTransformer(nn.Module):
     def forward(self, q: torch.Tensor, kv: torch.Tensor) -> torch.Tensor:
         normed_q = self.norm1(q)
         normed_kv = self.norm2(kv)
-        attn_output = self.self_attn(normed_q, normed_kv, normed_kv)
+        attn_output = self.self_attn(normed_q, normed_q, normed_q)
         q = q + self.dropout(attn_output)
 
         normed_q = self.norm3(q)
