@@ -7,6 +7,7 @@ from torch.nn import functional as F
 from data import FeatureType
 
 from .audio_encoder import ConformerAttentiveProbe
+from .cross_attn import CrossAttnClassifier
 from .dummy_net import DummyNet
 from .early_mm import EalryClassifier
 from .late_mm import LateClassifier
@@ -63,6 +64,18 @@ class EmoClassifier(pl.LightningModule):
 
             case FeatureType.LATE_FUSION:
                 self.model = LateClassifier(num_classes=num_classes)
+                self.model.proc.eval()
+                if transfer_learning:
+                    self.model.text_enc.eval()
+                    for param in self.model.text_enc.parameters():
+                        param.requires_grad = False
+
+                    self.model.audio_enc.eval()
+                    for param in self.model.audio_enc.parameters():
+                        param.requires_grad = False
+
+            case FeatureType.CROSS_ATTN:
+                self.model = CrossAttnClassifier(num_classes=num_classes)
                 self.model.proc.eval()
                 if transfer_learning:
                     self.model.text_enc.eval()
