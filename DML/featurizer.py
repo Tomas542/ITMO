@@ -55,6 +55,7 @@ val_wavs = val_df["video"].apply(lambda x: mosei_path + wav_dir + x + ".wav").to
 test_wavs = test_df["video"].apply(lambda x: mosei_path + wav_dir + x + ".wav").to_list()
 
 del train_df, val_df, test_df
+
 # TF-iDF
 tf_idf = TfidfVectorizer(min_df=0.001, max_df=0.999, max_features=300)
 train_tf_idf = tf_idf.fit_transform(train_text)
@@ -70,15 +71,17 @@ val_tokenized = [tokenize(text) for text in val_text]
 test_tokenized = [tokenize(text) for text in test_text]
 
 # Word2Vec
-w2v = gensim.models.Word2Vec(train_tokenized, vector_size=250, min_count=2, window=3)
+w2v = gensim.models.Word2Vec(train_tokenized, vector_size=300, min_count=2, window=3)
 
 train_w2v = [get_sentence_mean_vec(w2v, text) for text in train_tokenized]
-val_w2v = [get_sentence_mean_vec(w2v, text) for text in train_tokenized]
-test_w2v = [get_sentence_mean_vec(w2v, text) for text in train_tokenized]
+val_w2v = [get_sentence_mean_vec(w2v, text) for text in val_tokenized]
+test_w2v = [get_sentence_mean_vec(w2v, text) for text in test_tokenized]
 
 np.save("features/train_w2v.npy", np.array(train_w2v))
 np.save("features/val_w2v.npy", np.array(val_w2v))
 np.save("features/test_w2v.npy", np.array(test_w2v))
+
+exit()
 
 
 # LogMel

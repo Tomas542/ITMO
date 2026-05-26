@@ -40,6 +40,7 @@ class SentimentDataset(Dataset):
         self.sentiment = df["sentiment"].to_list()
         self.sent_cls = {"negative": 0, "neutral": 1, "positive": 2}
         self.max_length = max_length
+        feature_type = FeatureType(feature_type)
 
         match feature_type:
             case FeatureType.TFIDF:
