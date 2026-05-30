@@ -32,7 +32,7 @@ class SentimentDataset(Dataset):
         self,
         feature_type: FeatureType,
         split: SplitType,
-        mosei_path: str = "/home/ext-yudin-a@ad.speechpro.com/dml/datasets/CMU-MOSEI/",
+        mosei_path: str,
         max_length: int = 32000,
     ) -> None:
         suffix = "original" if split == "test" else "modified"
@@ -105,7 +105,7 @@ class MultiModalSentimentDataset(Dataset):
     def __init__(
         self,
         split: SplitType,
-        mosei_path: str = "/home/ext-yudin-a@ad.speechpro.com/dml/datasets/CMU-MOSEI/",
+        mosei_path: str,
         max_length: int = 32000,
     ) -> None:
         suffix = "original" if split == "test" else "modified"
@@ -181,12 +181,12 @@ def collate_fn(batch):
     return features, labels
 
 
-def get_dataloader(encoding_type: FeatureType, split: SplitType) -> DataLoader:
+def get_dataloader(encoding_type: FeatureType, split: SplitType, mosei_path: str = "/home/ext-yudin-a@ad.speechpro.com/dml/datasets/CMU-MOSEI/") -> DataLoader:
     feature_type = FeatureType(encoding_type)
     if feature_type in (FeatureType.EARLY_FUSION, FeatureType.EARLY_FUSION_V2, FeatureType.LATE_FUSION, FeatureType.CROSS_ATTN):
-        ds = MultiModalSentimentDataset(split)
+        ds = MultiModalSentimentDataset(split, mosei_path)
     else:  # unimodal
-        ds = SentimentDataset(encoding_type, split)
+        ds = SentimentDataset(encoding_type, split, mosei_path)
     return DataLoader(
         ds,
         batch_size=32,

@@ -12,6 +12,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--test", type=bool, default=False)
     parser.add_argument("--ckpt_path", type=str, default=None)
     parser.add_argument("--feature_type", type=str, choices=["tf_idf", "w2v", "mel", "mfcc", "conformer", "bert", "early_fusion", "early_fusion_v2", "late_fusion", "cross-attn-fusion"], required=True)
+    parser.add_argument("--mosei_path", type=str, required=True, help="Path to mosei folder")
     parser.add_argument("--num_layers", type=int, default=4)
     parser.add_argument("--num_heads", type=int, default=4)
     parser.add_argument("--transfer_learning", type=bool, default=True)
@@ -56,8 +57,8 @@ def main(args) -> None:
     )
     ckpt_path = args.ckpt_path
     if args.train:
-        train_loader = get_dataloader(args.feature_type, "train")
-        val_loader = get_dataloader(args.feature_type, "val")
+        train_loader = get_dataloader(args.feature_type, "train", args.mosei_path)
+        val_loader = get_dataloader(args.feature_type, "val", args.mosei_path)
         trainer.fit(lm, train_dataloaders=train_loader, val_dataloaders=val_loader)
         ckpt_path = "best"
     if args.test:
