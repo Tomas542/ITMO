@@ -16,6 +16,7 @@ class FeatureType(Enum):
     CONFORMER = "conformer"
     BERT = "bert"
     EARLY_FUSION = "early_fusion"
+    EARLY_FUSION_V2 = "early_fusion_v2"
     LATE_FUSION = "late_fusion"
     CROSS_ATTN = "cross-attn-fusion"
 
@@ -182,7 +183,7 @@ def collate_fn(batch):
 
 def get_dataloader(encoding_type: FeatureType, split: SplitType) -> DataLoader:
     feature_type = FeatureType(encoding_type)
-    if feature_type in (FeatureType.EARLY_FUSION, FeatureType.LATE_FUSION, FeatureType.CROSS_ATTN):
+    if feature_type in (FeatureType.EARLY_FUSION, FeatureType.EARLY_FUSION_V2, FeatureType.LATE_FUSION, FeatureType.CROSS_ATTN):
         ds = MultiModalSentimentDataset(split)
     else:  # unimodal
         ds = SentimentDataset(encoding_type, split)

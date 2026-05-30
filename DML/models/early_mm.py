@@ -48,3 +48,37 @@ class EalryClassifier(nn.Module):
     def load_audio_weights(self, path: Path) -> None:
         load_model(self.proc, path.joinpath("audio_preprocessor.safetensors"))
         load_model(self.audio_enc, path.joinpath("conformer.safetensors"))
+
+
+class EalryClassifierv2(EalryClassifier):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        hidden_size = 384
+        self.classifier = nn.Sequential(
+            nn.Dropout(0.2),
+            nn.LayerNorm(hidden_size * 2),
+            nn.Linear(2 * hidden_size, 128),
+            nn.LayerNorm(128),
+            nn.SiLU(),
+            nn.Linear(128, 3),
+        )
+
+    def forward(self, wavs: torch.Tensor, unpaded_length: list[int], text: list[str]) -> torch.Tensor:
+        assert len(wavs.shape) == 2, "Audio should be [batch, length] size"
+
+        text_emb = self.text_enc.encode(text, convert_to_tensor=True).clone()
+
+        processed_features, length = self.proc.get_features(wavs, unpaded_length)
+        audio_emb, _ = self.audio_enc(processed_features, length)
+        audio_emb = audio_emb.mean(dim=-1)
+
+        text_emb = self.text_proj(text_emb)
+        audio_emb = self.audio_proj(audio_emb)
+        emb = torch.cat((text_emb, audio_emb), dim=-1)
+
+        out = self.classifier(emb)
+        return out
+
+    def load_audio_weights(self, path: Path) -> None:
+        load_model(self.proc, path.joinpath("audio_preprocessor.safetensors"))
+        load_model(self.audio_enc, path.joinpath("conformer.safetensors"))

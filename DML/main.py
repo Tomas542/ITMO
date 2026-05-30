@@ -11,7 +11,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--train", type=bool, default=False)
     parser.add_argument("--test", type=bool, default=False)
     parser.add_argument("--ckpt_path", type=str, default=None)
-    parser.add_argument("--feature_type", type=str, choices=["tf_idf", "w2v", "mel", "mfcc", "conformer", "bert", "early_fusion", "late_fusion", "cross-attn-fusion"], required=True)
+    parser.add_argument("--feature_type", type=str, choices=["tf_idf", "w2v", "mel", "mfcc", "conformer", "bert", "early_fusion", "early_fusion_v2", "late_fusion", "cross-attn-fusion"], required=True)
     parser.add_argument("--num_layers", type=int, default=4)
     parser.add_argument("--num_heads", type=int, default=4)
     parser.add_argument("--transfer_learning", type=bool, default=True)

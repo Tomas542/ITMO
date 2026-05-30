@@ -9,7 +9,7 @@ from data import FeatureType
 from .audio_encoder import ConformerAttentiveProbe
 from .cross_attn import CrossAttnClassifier
 from .dummy_net import DummyNet
-from .early_mm import EalryClassifier
+from .early_mm import EalryClassifier, EalryClassifierv2
 from .late_mm import LateClassifier
 from .text_encoder import BertAttentiveProbe
 
@@ -52,6 +52,18 @@ class EmoClassifier(pl.LightningModule):
 
             case FeatureType.EARLY_FUSION:
                 self.model = EalryClassifier(num_classes=num_classes)
+                self.model.proc.eval()
+                if transfer_learning:
+                    self.model.text_enc.eval()
+                    for param in self.model.text_enc.parameters():
+                        param.requires_grad = False
+
+                    self.model.audio_enc.eval()
+                    for param in self.model.audio_enc.parameters():
+                        param.requires_grad = False
+
+            case FeatureType.EARLY_FUSION_V2:
+                self.model = EalryClassifierv2(num_classes=num_classes)
                 self.model.proc.eval()
                 if transfer_learning:
                     self.model.text_enc.eval()
