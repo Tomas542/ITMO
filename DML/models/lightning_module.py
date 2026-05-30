@@ -23,7 +23,7 @@ class EmoClassifier(pl.LightningModule):
                 input_dim = 300
                 self.model = DummyNet(input_dim, num_classes)
             case FeatureType.W2V:
-                input_dim = 300
+                input_dim = 250
                 self.model = DummyNet(input_dim, num_classes)
             case FeatureType.MEL:
                 input_dim = 128
