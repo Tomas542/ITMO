@@ -95,7 +95,7 @@ def main() -> None:
                 val_tokenized = [tokenize(text) for text in val_text]
                 test_tokenized = [tokenize(text) for text in test_text]
 
-                w2v = gensim.models.Word2Vec(train_tokenized, vector_size=300, min_count=2, window=3)
+                w2v = gensim.models.Word2Vec(train_tokenized, vector_size=250, min_count=2, window=3)
 
                 train_w2v = [get_sentence_mean_vec(w2v, text) for text in train_tokenized]
                 val_w2v = [get_sentence_mean_vec(w2v, text) for text in val_tokenized]
