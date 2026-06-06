@@ -23,3 +23,15 @@ Audio classification
 ## DML (2 semester)
 
 Course work with sentiment classificaiton
+
+## AML (2 semester)
+
+Naive ML classifier
+
+## NLP (2 semester)
+
+Text cleaning, tokenization, classification
+
+## DSSP (2 semester)
+
+Signal processing with focus on speech
