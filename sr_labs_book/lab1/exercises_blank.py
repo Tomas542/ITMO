@@ -17,8 +17,8 @@ def split_meta_line(line, delimiter=' '):
     """
 
     ###########################################################
-    # Here is your code
-
+    parts = line.strip().split(delimiter)
+    speaker_id, gender, file_path = parts[0], parts[1], parts[2]
     ###########################################################
 
     return speaker_id, gender, file_path
@@ -33,8 +33,7 @@ def preemphasis(signal, pre_emphasis=0.97):
     """
 
     ###########################################################
-    # Here is your code
-
+    emphasized_signal = np.append(signal[0], signal[1:] - pre_emphasis * signal[:-1])
     ###########################################################
 
     return emphasized_signal
@@ -64,8 +63,11 @@ def framing(emphasized_signal, sample_rate=16000, frame_size=0.025, frame_stride
                                                  # truncating any samples from the original signal
 
     ###########################################################
-    # Here is your code to compute frames
-
+    indices = np.tile(np.arange(0, frame_length), (num_frames, 1)) + np.tile(
+        np.arange(0, num_frames * frame_step, frame_step), (frame_length, 1)
+    ).T
+    frames = pad_signal[indices.astype(np.int32, copy=False)]
+    frames *= np.hamming(frame_length)
     ###########################################################
 
     return frames
@@ -82,8 +84,7 @@ def power_spectrum(frames, NFFT=512):
     mag_frames = np.absolute(np.fft.rfft(frames, NFFT))  # Magnitude of the FFT
 
     ###########################################################
-    # Here is your code to compute pow_frames
-
+    pow_frames = (1.0 / NFFT) * (mag_frames ** 2)
     ###########################################################
 
     return pow_frames
@@ -102,17 +103,13 @@ def compute_fbank_filters(nfilt=40, sample_rate=16000, NFFT=512):
     high_freq = sample_rate / 2
 
     ###########################################################
-    # Here is your code to convert Convert Hz to Mel: 
-    # high_freq -> high_freq_mel
-    
+    high_freq_mel = 2595 * np.log10(1 + high_freq / 700)
     ###########################################################
 
     mel_points = np.linspace(low_freq_mel, high_freq_mel, nfilt + 2) # equally spaced in mel scale
 
     ###########################################################
-    # Here is your code to convert Convert Mel to Hz: 
-    # mel_points -> hz_points
-    
+    hz_points = 700 * (10 ** (mel_points / 2595) - 1)
     ###########################################################
 
     bin = np.floor((NFFT + 1) * hz_points / sample_rate)
@@ -140,8 +137,7 @@ def compute_fbanks_features(pow_frames, fbank):
     """
     
     ###########################################################
-    # Here is your code to compute filter_banks_features
-    
+    filter_banks_features = np.dot(pow_frames, fbank.T)
     ###########################################################
 
     filter_banks_features = np.where(filter_banks_features == 0, np.finfo(float).eps,
@@ -160,8 +156,7 @@ def compute_mfcc(filter_banks_features, num_ceps=20):
     """
     
     ###########################################################
-    # Here is your code to compute mfcc features
-    
+    mfcc = dct(filter_banks_features, type=2, axis=1, norm='ortho')[:, :num_ceps]
     ###########################################################
 
     return mfcc
@@ -189,8 +184,9 @@ def mvn_floating(features, LC, RC, unbiased=False):
          ) / (n - 1 if unbiased else n) - f ** 2 * (n / (n - 1) if unbiased else 1)
     
     ###########################################################
-    # Here is your code to compute normalised features
-    
+    std = np.sqrt(s)
+    std[std == 0] = 1.0
+    normalised_features = (features - f) / std
     ###########################################################
 
     normalised_features[s == 0] = 0

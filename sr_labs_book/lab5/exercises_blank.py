@@ -85,6 +85,28 @@ def mean_embd_norm(test_embds, adapt_embds):
     
     return test_embds_adapted
 
+def _cohort_mean_std(models, cohort, n_s, eps):
+    # Mean and std of the top-n_s cosine scores of each model against the cohort
+
+    n_s = min(int(n_s), cohort.shape[0])
+    top_scores = None
+    chunk = 4096
+
+    for start in range(0, cohort.shape[0], chunk):
+        scores = cosine_similarity(models, cohort[start:start + chunk])
+        if top_scores is None:
+            merged = scores
+        else:
+            merged = np.concatenate((top_scores, scores), axis=1)
+
+        if merged.shape[1] > n_s:
+            index = np.argpartition(merged, -n_s, axis=1)[:, -n_s:]
+            top_scores = np.take_along_axis(merged, index, axis=1)
+        else:
+            top_scores = merged
+
+    return top_scores.mean(axis=1), top_scores.std(axis=1) + eps
+
 def s_norm(test_data, lines, adapt_data, N_s=200, eps=0.5):
     """
     Function to perform s-normalization for scores with the snorm_data
@@ -123,11 +145,24 @@ def s_norm(test_data, lines, adapt_data, N_s=200, eps=0.5):
     for id, a in enumerate(adapt_list):
         A.append(adapt_data[a].squeeze(0).numpy())
     A = np.array(A)
-    
-    ###########################################################
-    # Here is your code
-    
-    ###########################################################
+
+    enroll_index = {wav: i for i, wav in enumerate(enroll_list)}
+    test_index = {wav: i for i, wav in enumerate(test_list)}
+
+    mu_e, sigma_e = _cohort_mean_std(E, A, N_s, eps)
+    mu_t, sigma_t = _cohort_mean_std(T, A, N_s, eps)
+    scores_et = cosine_similarity(E, T)
+
+    for line in tqdm.tqdm(lines, total=len(lines), desc='Scoring with s-norm'):
+        trial_label, enroll_wav, test_wav = line.split()
+        i = enroll_index[enroll_wav]
+        j = test_index[test_wav]
+        score = scores_et[i, j]
+        score = (score - mu_e[i]) / (2.0 * sigma_e[i]) + (score - mu_t[j]) / (2.0 * sigma_t[j])
+
+        scores_adapted.append(score)
+        all_labels.append(int(trial_label))
+        all_trials.append(enroll_wav + " " + test_wav)
 
     return scores_adapted, all_labels, all_trials
 
@@ -158,11 +193,8 @@ class LinearCalibrationModel(torch.nn.Module):
         self.calib_params = nn.Linear(1, 1)
 
     def forward(self, x):
-        
-        ###########################################################
-        # Here is your code
-            
-        ###########################################################
+
+        calib_x = self.calib_params(x)
 
         return calib_x
     
@@ -186,12 +218,11 @@ class CalibrationLoss(nn.Module):
             
             return torch.log1p(torch.exp(-lodds))
         
-        loss_value = 0
-        
-        ###########################################################
-        # Here is your code
-
-        ###########################################################
+        alpha = float(self.alpha)
+        loss_value = (
+            self.ptar * negative_log_sigmoid(target_llrs + alpha).mean()
+            + (1.0 - self.ptar) * negative_log_sigmoid(-nontarget_llrs - alpha).mean()
+        )
 
         return loss_value
 
@@ -205,11 +236,13 @@ def train_calibration(train_loader, model, criterion, optimizer, scheduler, num_
         for batch_idx, batch_data in enumerate(train_loader):
             tar_sc = batch_data[0]
             imp_sc = batch_data[1]
-            
-            ###########################################################
-            # Here is your code
-            
-            ###########################################################
+
+            optimizer.zero_grad()
+            tar_llrs = model(tar_sc.float().view(-1, 1))
+            imp_llrs = model(imp_sc.float().view(-1, 1))
+            loss = criterion(tar_llrs, imp_llrs)
+            loss.backward()
+            optimizer.step()
                             
         lr_value = optimizer.param_groups[0]['lr']
 

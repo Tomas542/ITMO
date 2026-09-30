@@ -14,8 +14,15 @@ def load_vad_markup(path_to_rttm, signal, fs):
     vad_markup = np.zeros(len(signal)).astype('float32')
         
     ###########################################################
-    # Here is your code
-    
+    with open(path_to_rttm, 'r') as f:
+        for line in f:
+            parts = line.strip().split()
+            if len(parts) >= 5 and parts[0] == 'SPEAKER':
+                tbeg = float(parts[3])
+                tdur = float(parts[4])
+                start_sample = int(round(tbeg * fs))
+                end_sample = int(round((tbeg + tdur) * fs))
+                vad_markup[start_sample:end_sample] = 1.0
     ###########################################################
     
     return vad_markup
@@ -24,11 +31,11 @@ def framing(signal, window=320, shift=160):
     # Function to create frames from signal
     
     shape   = (int((signal.shape[0] - window)/shift + 1), window)
-    frames  = np.zeros().astype('float32')
+    frames  = np.zeros(shape).astype('float32')
 
     ###########################################################
-    # Here is your code
-    
+    strides = (signal.strides[0] * shift, signal.strides[0])
+    frames = np.lib.stride_tricks.as_strided(signal, shape=shape, strides=strides).astype('float32')
     ###########################################################
     
     return frames
@@ -39,8 +46,7 @@ def frame_energy(frames):
     E = np.zeros(frames.shape[0]).astype('float32')
 
     ###########################################################
-    # Here is your code
-    
+    E = np.sum(frames, axis=1).astype('float32')
     ###########################################################
     
     return E
@@ -51,8 +57,11 @@ def norm_energy(E):
     E_norm = np.zeros(len(E)).astype('float32')
 
     ###########################################################
-    # Here is your code
-    
+    mean_E = np.mean(E)
+    std_E = np.std(E)
+    if std_E == 0:
+        std_E = 1e-10
+    E_norm = ((E - mean_E) / std_E).astype('float32')
     ###########################################################
     
     return E_norm
@@ -70,14 +79,22 @@ def gmm_train(E, gauss_pdf, n_realignment):
 
         # E-step
         ###########################################################
-        # Here is your code
-
+        for j in range(len(w)):
+            g[:, j] = w[j] * gauss_pdf(E, m[j], sigma[j])
+        sum_g = np.sum(g, axis=1, keepdims=True)
+        sum_g[sum_g == 0] = 1e-10
+        g = g / sum_g
         ###########################################################
 
         # M-step
         ###########################################################
-        # Here is your code
+        sum_g_j = np.sum(g, axis=0)
+        sum_g_j_safe = np.where(sum_g_j == 0, 1e-10, sum_g_j)
 
+        w = sum_g_j / len(E)
+        m = np.sum(g * E[:, np.newaxis], axis=0) / sum_g_j_safe
+        sigma = np.sqrt(np.sum(g * (E[:, np.newaxis] - m)**2, axis=0) / sum_g_j_safe)
+        sigma[sigma == 0] = 1e-10
         ###########################################################
         
     return w, m, sigma
@@ -88,8 +105,15 @@ def eval_frame_post_prob(E, gauss_pdf, w, m, sigma):
     g0 = np.zeros(len(E))
 
     ###########################################################
-    # Here is your code
+    idx_speechless = np.argmin(m)
 
+    g = np.zeros((len(E), len(w)))
+    for j in range(len(w)):
+        g[:, j] = w[j] * gauss_pdf(E, m[j], sigma[j])
+
+    sum_g = np.sum(g, axis=1)
+    sum_g[sum_g == 0] = 1e-10
+    g0 = g[:, idx_speechless] / sum_g
     ###########################################################
             
     return g0
@@ -136,8 +160,7 @@ def reverb(signal, impulse_response):
     signal_reverb = np.zeros(len(signal)).astype('float32')
     
     ###########################################################
-    # Here is your code
-    
+    signal_reverb = scipy.signal.fftconvolve(signal, impulse_response, mode='full')[:len(signal)].astype('float32')
     ###########################################################
     
     return signal_reverb
@@ -148,8 +171,8 @@ def awgn(signal, sigma_noise):
     signal_noise = np.zeros(len(signal)).astype('float32')
     
     ###########################################################
-    # Here is your code
-    
+    noise = np.random.normal(0, sigma_noise, len(signal))
+    signal_noise = (signal + noise).astype('float32')
     ###########################################################
     
     return signal_noise
