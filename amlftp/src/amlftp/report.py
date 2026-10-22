@@ -48,11 +48,9 @@ class ReportData:
 def write_reports(data: ReportData, reports_dir: Path) -> tuple[Path, Path]:
     """Write ``report.md`` and ``report.html`` into ``reports_dir``."""
     reports_dir.mkdir(parents=True, exist_ok=True)
-    markdown_path = reports_dir / "report.md"
     html_path = reports_dir / "report.html"
-    markdown_path.write_text(render_markdown(data), encoding="utf-8")
     html_path.write_text(render_html(data), encoding="utf-8")
-    return markdown_path, html_path
+    return html_path
 
 
 def render_markdown(data: ReportData) -> str:

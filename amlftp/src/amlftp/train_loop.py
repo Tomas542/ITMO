@@ -159,6 +159,7 @@ def fit_model(
         fusion_score = score_predictions(val_true, val_fusion, label_names, name=FUSION_NAME)
         image_score = score_predictions(val_true, val_image, label_names, name=IMAGE_NAME)
         text_score = score_predictions(val_true, val_text, label_names, name=TEXT_NAME)
+
         history["train_loss"].append(train_loss)
         history["val_loss"].append(val_loss)
         history["train_macro_f1"].append(train_score.macro_f1)
@@ -166,11 +167,13 @@ def fit_model(
         history["val_accuracy"].append(fusion_score.accuracy)
         history["image_val_macro_f1"].append(image_score.macro_f1)
         history["text_val_macro_f1"].append(text_score.macro_f1)
+
         improved = fusion_score.macro_f1 > best_macro_f1
         if improved:
             best_macro_f1 = fusion_score.macro_f1
             best_state = cpu_state_dict(model)
         completed = epoch + 1
+
         print(
             f"Эпоха {completed}/{epochs}: loss {train_loss:.4f}/{val_loss:.4f}, "
             f"macro-F1 fusion {fusion_score.macro_f1:.3f}, фото {image_score.macro_f1:.3f}, "
@@ -205,7 +208,7 @@ def run_training(config: TrainConfig) -> None:
         validate_resume(resume_state, config)
 
     set_seed(config.seed)
-    print(f"Seed зафиксирован: {config.seed}", flush=True)
+    print(f"Seed зафиксирован: {config.seed}")
 
     prepared = load_prepared_data(config)
     label_names = list(prepared.labels)
@@ -215,7 +218,7 @@ def run_training(config: TrainConfig) -> None:
     config.weights_dir.mkdir(parents=True, exist_ok=True)
     config.reports_dir.mkdir(parents=True, exist_ok=True)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Устройство: {device}", flush=True)
+    print(f"Устройство: {device}")
 
     image_encoder, text_encoder, tokenizer = _ensure_encoders(config, device)
     train_split, val_split, test_split = _ensure_cache(
@@ -228,8 +231,6 @@ def run_training(config: TrainConfig) -> None:
     )
     image_encoder.cpu()
     text_encoder.cpu()
-    if device.type == "cuda":
-        torch.cuda.empty_cache()
 
     model = TokenFusion(
         image_dim=config.image_dim,
@@ -254,7 +255,7 @@ def run_training(config: TrainConfig) -> None:
         best_macro_f1 = resume_state.best_macro_f1
         best_state = resume_state.best_model_state
         restore_rng_state(resume_state.rng)
-        print(f"Возобновление с эпохи {start_epoch}", flush=True)
+        print(f"Возобновление с эпохи {start_epoch}")
 
     def on_epoch_end(result: EpochResult, epoch_optimizer: torch.optim.Optimizer) -> None:
         _save_epoch(config, result, epoch_optimizer, label_names)
@@ -445,12 +446,14 @@ def _run_epoch(
         model.train()
     else:
         model.eval()
+
     total_loss = 0.0
     seen = 0
     y_true: list[int] = []
     fusion_pred: list[int] = []
     image_pred: list[int] = []
     text_pred: list[int] = []
+
     context = torch.enable_grad() if train else torch.inference_mode()
     with context:
         for batch in loader:
@@ -459,20 +462,24 @@ def _run_epoch(
             text = text.to(device)
             mask = mask.to(device)
             target = target.to(device)
+
             pad = mask == 0
-            if train and optimizer is not None:
-                optimizer.zero_grad(set_to_none=True)
+
             output = model(image, text, pad)
             image_logits = model.image_logits(image)
             text_logits = model.text_logits(text, pad)
+
             fusion_loss = criterion(output.logits, target)
             if train and optimizer is not None:
+                optimizer.zero_grad(set_to_none=True)
                 baseline_loss = criterion(image_logits, target) + criterion(text_logits, target)
                 (fusion_loss + baseline_loss).backward()
                 optimizer.step()
+
             batch_size = int(target.size(0))
             total_loss += float(fusion_loss.detach().item()) * batch_size
             seen += batch_size
+
             y_true.extend(int(value) for value in target.detach().cpu().tolist())
             fusion_pred.extend(int(value) for value in output.logits.argmax(dim=1).detach().cpu().tolist())
             image_pred.extend(int(value) for value in image_logits.argmax(dim=1).detach().cpu().tolist())
@@ -531,8 +538,7 @@ def _write_report(
         examples=tuple(examples),
         image_note=IMAGE_NOTE,
     )
-    markdown_path, html_path = write_reports(report, config.reports_dir)
-    print(f"Отчёт: {markdown_path}", flush=True)
+    html_path = write_reports(report, config.reports_dir)
     print(f"Отчёт: {html_path}", flush=True)
 
 
@@ -550,25 +556,30 @@ def _build_examples(
     examples_dir.mkdir(parents=True, exist_ok=True)
     views: list[ExampleView] = []
     manifest: list[dict[str, str]] = []
+
     for number, index in enumerate(pick_example_indices(y_true, y_pred, config.num_examples)):
         image = split.image_tokens[index].float().unsqueeze(0).to(device)
         text = split.text_tokens[index].float().unsqueeze(0).to(device)
         mask = split.attention_mask[index].long().unsqueeze(0).to(device)
+
         with torch.inference_mode():
             output = model(image, text, mask == 0)
         probabilities_tensor = torch.softmax(output.logits, dim=-1).squeeze(0).cpu()
         probabilities = {
             label: float(probabilities_tensor[label_index]) for label_index, label in enumerate(label_names)
         }
+
         attention_map = text_to_image_map(output.attn_text_to_image, mask.squeeze(0))
         raw_weights = image_to_text_weights(output.attn_image_to_text, mask.squeeze(0))
         token_ids = [int(value) for value in split.input_ids[index].tolist()]
         tokens = [str(token) for token in tokenizer.convert_ids_to_tokens(token_ids)]
         shown_tokens, shown_weights = visible_tokens(tokens, [float(value) for value in raw_weights])
+
         photo = png_to_pil(split.images_png[index])
         photo_name = f"{number}.png"
         photo.save(examples_dir / photo_name)
         figure_name = f"figures/example_{number}.png"
+
         save_example_figure(
             photo,
             attention_map,

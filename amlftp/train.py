@@ -10,7 +10,6 @@ from pathlib import Path
 os.environ.setdefault("HF_HOME", str(Path(__file__).resolve().parent / "data" / "hf"))
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
-from amlftp.checkpoint import ResumeConfigError, SeedMismatchError  # noqa: E402
 from amlftp.config import TrainConfig  # noqa: E402
 from amlftp.train_loop import run_training  # noqa: E402
 
@@ -43,7 +42,7 @@ def main(argv: list[str] | None = None) -> None:
     """Run training and turn expected setup errors into a non-zero exit."""
     try:
         run_training(parse_args(argv))
-    except (SeedMismatchError, ResumeConfigError, FileNotFoundError, ValueError) as exc:
+    except (RuntimeError, FileNotFoundError, ValueError) as exc:
         print(exc, file=sys.stderr)
         raise SystemExit(2) from exc
 

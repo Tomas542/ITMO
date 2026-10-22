@@ -12,14 +12,6 @@ from torch import nn
 from amlftp.config import TrainConfig
 
 
-class SeedMismatchError(RuntimeError):
-    """Raised when ``--seed`` does not match the checkpoint being resumed."""
-
-
-class ResumeConfigError(RuntimeError):
-    """Raised when a resume checkpoint belongs to a different setup."""
-
-
 @dataclass
 class ResumeState:
     """Full training state written to ``weights/last.pt``."""
@@ -158,12 +150,11 @@ def load_inference(path: Path) -> InferenceState:
 def validate_resume(state: ResumeState, config: TrainConfig) -> None:
     """Stop resume when the seed or the setup differs from the checkpoint."""
     if state.seed != config.seed:
-        raise SeedMismatchError(f"Seed в чекпоинте ({state.seed}) не совпадает с --seed ({config.seed}).")
+        msg = f"Seed в чекпоинте ({state.seed}) не совпадает с --seed ({config.seed})."
+        raise RuntimeError(msg)
     if state.max_per_class != config.max_per_class:
-        raise ResumeConfigError(
-            f"max_per_class в чекпоинте ({state.max_per_class}) "
-            f"не совпадает с --max-per-class ({config.max_per_class})."
-        )
+        msg = f"max_per_class в чекпоинте ({state.max_per_class}) не совпадает с --max-per-class ({config.max_per_class})."
+        raise RuntimeError(msg)
     architecture_matches = (
         state.d_model == config.d_model
         and state.n_heads == config.n_heads
@@ -175,7 +166,8 @@ def validate_resume(state: ResumeState, config: TrainConfig) -> None:
         and state.labels == list(config.allowed_labels)
     )
     if not architecture_matches:
-        raise ResumeConfigError("Архитектура или список классов чекпоинта не совпадает с текущим запуском.")
+        msg = "Архитектура или список классов чекпоинта не совпадает с текущим запуском."
+        raise RuntimeError(msg)
 
 
 def _as_history(value: object) -> dict[str, list[float]]:
