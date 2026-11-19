@@ -12,6 +12,10 @@ from torch import nn
 from amlftp.config import TrainConfig
 
 
+class SeedMismatchError(RuntimeError):
+    """Resume checkpoint was created with a different seed."""
+
+
 @dataclass
 class ResumeState:
     """Full training state written to ``weights/last.pt``."""
@@ -151,9 +155,12 @@ def validate_resume(state: ResumeState, config: TrainConfig) -> None:
     """Stop resume when the seed or the setup differs from the checkpoint."""
     if state.seed != config.seed:
         msg = f"Seed в чекпоинте ({state.seed}) не совпадает с --seed ({config.seed})."
-        raise RuntimeError(msg)
+        raise SeedMismatchError(msg)
     if state.max_per_class != config.max_per_class:
-        msg = f"max_per_class в чекпоинте ({state.max_per_class}) не совпадает с --max-per-class ({config.max_per_class})."
+        msg = (
+            f"max_per_class в чекпоинте ({state.max_per_class}) не совпадает "
+            f"с --max-per-class ({config.max_per_class})."
+        )
         raise RuntimeError(msg)
     architecture_matches = (
         state.d_model == config.d_model

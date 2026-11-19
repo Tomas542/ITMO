@@ -45,9 +45,10 @@ class ReportData:
     image_note: str
 
 
-def write_reports(data: ReportData, reports_dir: Path) -> tuple[Path, Path]:
-    """Write ``report.md`` and ``report.html`` into ``reports_dir``."""
+def write_reports(data: ReportData, reports_dir: Path) -> Path:
+    """Write ``report.md`` and ``report.html`` into ``reports_dir``. Returns the HTML path."""
     reports_dir.mkdir(parents=True, exist_ok=True)
+    (reports_dir / "report.md").write_text(render_markdown(data), encoding="utf-8")
     html_path = reports_dir / "report.html"
     html_path.write_text(render_html(data), encoding="utf-8")
     return html_path
