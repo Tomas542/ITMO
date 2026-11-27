@@ -10,6 +10,7 @@ import tempfile
 import threading
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
 os.environ.setdefault("HF_HOME", str(Path(tempfile.gettempdir()) / "amlftp-hf"))
 os.environ.setdefault("HF_HUB_OFFLINE", "1")
 os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")

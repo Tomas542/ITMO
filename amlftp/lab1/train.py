@@ -7,7 +7,9 @@ import os
 import sys
 from pathlib import Path
 
-os.environ.setdefault("HF_HOME", str(Path(__file__).resolve().parent / "data" / "hf"))
+_HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(_HERE / "src"))
+os.environ.setdefault("HF_HOME", str(_HERE / "data" / "hf"))
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
 from amlftp.config import TrainConfig  # noqa: E402

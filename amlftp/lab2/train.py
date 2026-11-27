@@ -9,6 +9,7 @@ from pathlib import Path
 
 # Reuse the dataset cache already downloaded for lab1 when it is present.
 _HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(_HERE / "src"))
 _SHARED_HF = _HERE.parent / "lab1" / "data" / "hf"
 _HF_HOME = _SHARED_HF if _SHARED_HF.is_dir() else _HERE / "data" / "hf"
 os.environ.setdefault("HF_HOME", str(_HF_HOME))
